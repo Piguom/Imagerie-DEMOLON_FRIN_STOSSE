@@ -9,7 +9,7 @@ import cv2
 from threading import Thread
 
 class Draw(Frame):
-    "classe définissant la fenêtre principale du programme"
+    "classe dÃ©finissant la fenÃªtre principale du programme"
     def __init__(self, fenetre, **kwargs):
         Frame.__init__(self, fenetre, **kwargs)
         self.grid(row=3, column=3, sticky="n")
@@ -59,7 +59,7 @@ class Draw(Frame):
         self.recty0 = self.can.canvasy(event.y) 
         #Create rectangle
         self.rect = self.can.create_rectangle(
-            self.rectx0, self.recty0, self.rectx0, self.recty0, fill="#4eccde")
+            self.rectx0, self.recty0, self.rectx0, self.recty0, fill="#fff")
         #Get rectangle's canvas object ID
         self.rectid = self.can.find_closest(self.rectx0, self.recty0, halo=2)
         print('Rectangle {0} started at {1} {2} {3} {4} '.
@@ -84,7 +84,7 @@ class Draw(Frame):
         #Modify rectangle x1, y1 coordinates (final)
         self.can.coords(self.rectid, self.rectx0, self.recty0,
                       self.rectx1, self.recty1)
-        print('Rectangle ended')
+        print('Rectangle dessinÃ©')
 
     def findpicture(self):
         self.filepath = tfd.askopenfilename(title="Ouvrir une image",filetypes=[('jpg files','.jpeg'),('all files','.*')])
@@ -158,8 +158,10 @@ class Draw(Frame):
         self.recty0 = int(round(self.recty0))
         self.rectx1 = int(round(self.rectx1))
         self.recty1 = int(round(self.recty1))
-        #rect_corp = (580,250,530,800)
-        rect_corp = (self.rectx0,self.recty0,self.rectx1,self.recty1)
+        if self.rectx0 != 0 :
+            rect_corp = (self.rectx0*2,self.recty0*2,(self.rectx1+self.rectx0)*2,(self.recty1+self.recty0)*2)
+        else :
+            rect_corp = (580,250,530,800)
         cv2.grabCut(im,mask,rect_corp,bgdModel,fgdModel,1,cv2.GC_INIT_WITH_RECT)
 
         #Application du masque
@@ -249,7 +251,7 @@ class Draw(Frame):
             # self.prog_bar = Progressbar(self.load, orient="horizontal", length=200, mode="indeterminate")        
 
 fenetre = Tk()
-fenetre.title("Générateur de Bande Dessinée")
+fenetre.title("GÃ©nÃ©rateur de Bande DessinÃ©e")
 interface = Draw(fenetre)
 interface.mainloop()
 interface.destroy()
