@@ -29,7 +29,12 @@ class Draw(Frame):
         self.bouton_modifier = Button(self, image=self.photodem, text="Modifier l'image",state='disabled', command=self.play)
         self.bouton_modifier.grid(row=2, column=3, pady=4)
 
-        self.bouton_quitter = Button(self, text="Quitter", command=fenetre.destroy)
+        self.exit = Image.open(open("exit.png","rb"))
+        x = 50
+        y = 30
+        resolution = (x,y)
+        self.photoexit = ImageTk.PhotoImage(self.exit.resize(resolution))
+        self.bouton_quitter = Button(self, image=self.photoexit, text="Quitter", command=fenetre.destroy)
         self.bouton_quitter.grid(row=5, column=3) 
 
         self.consigne = Label(self, text="Consigne 1 : Ajouter une image...",fg="red", font=("Calibri", 18))
@@ -37,6 +42,9 @@ class Draw(Frame):
 
         self.can = Canvas(self, bg='white', width=500, height=500)
         self.can.grid(row=1, column=0, padx=5, columnspan=2, rowspan=4 )
+
+        self.description = Label(self, text="", fg="blue", font=("Calibri", 16))
+        self.description.grid(row=5, column=0)
 
         self._thread = None
 
@@ -62,7 +70,7 @@ class Draw(Frame):
         self.rectx0 = self.can.canvasx(event.x)
         self.recty0 = self.can.canvasy(event.y) 
         #Create rectangle
-        self.rect = self.can.create_rectangle(self.rectx0, self.recty0, self.rectx0, self.recty0, fill="#fff")
+        self.rect = self.can.create_rectangle(self.rectx0, self.recty0, self.rectx0, self.recty0, fill=None)
         #Get rectangle's canvas object ID
         self.rectid = self.can.find_closest(self.rectx0, self.recty0, halo=2)
         print('Rectangle x0, y0 = {1}, {2}'.
@@ -86,13 +94,14 @@ class Draw(Frame):
         #Modify rectangle x1, y1 coordinates (final)
         self.can.coords(self.rectid, self.rectx0, self.recty0,
                       self.rectx1, self.recty1)
+        self.bouton_modifier.config(state='active')
         print 'Rectangle x1, y1 = ', self.rectx1, self.recty1
         print 'Rectangle dessiné'
 
     def findpicture(self):
         self.image = None
         self.filepath = tfd.askopenfilename(title="Ouvrir une image",filetypes=[('jpg files','.jpeg'),('all files','.*')])
-        self.displaypicture(self.filepath, True)
+        self.displaypicture(self.filepath, False)
 
     def displaypicture(self,path,isokornot):
         self.image = Image.open(open(path,"rb"))
@@ -105,13 +114,13 @@ class Draw(Frame):
         self.item = self.can.create_image(0,0,anchor = NW,image=self.photo)
         width, height = self.new_img.size
         self.can.config(width=width/2,height=height/2)
+        self.description.config(text="==> Image de base")
         if isokornot is True :            
             self.bouton_modifier.config(state='active')
-            self.consigne.config(text="Consigne 2 : Selectionner un rectangle pour appliquer le masque")
         else :
             self.bouton_modifier.config(state='disabled')
-
-            
+        if self.rectx0 == 0 :
+            self.consigne.config(text="Consigne 2 : Selectionner un rectangle pour appliquer le masque")
 
     def modificationimage(self):
         try:
@@ -133,16 +142,19 @@ class Draw(Frame):
         imgx75 = 75.*np.floor(im/75.)
         cv2.imwrite("resultat_intermediaire/image75.png", imgx75)
         self.displaypicture("resultat_intermediaire/image75.png",False)
+        self.description.config(text="==> Image quantifiée en 4 couleurs")
 
         #Quantification en 3 couleurs
         imgx100 = 100.*np.floor(im/100.)
         cv2.imwrite("resultat_intermediaire/image100.png", imgx100)
         self.displaypicture("resultat_intermediaire/image100.png",False)
+        self.description.config(text="==> Image quantifiée en 3 couleurs")
 
         #Quantification en 2 couleurs
         imgx150 = 150.*np.floor(im/150.)
         cv2.imwrite("resultat_intermediaire/image150.png", imgx150)
         self.displaypicture("resultat_intermediaire/image150.png",False)
+        self.description.config(text="==> Image quantifiée en 2 couleurs")
 
         #Lecture image quantifiee en 3 couleurs
         img = cv2.imread("resultat_intermediaire/image100.png")
@@ -156,6 +168,7 @@ class Draw(Frame):
         im_hls=cv2.cvtColor(im_bin3, cv2.COLOR_GRAY2RGB)
         cv2.imwrite("resultat_intermediaire/Dessin.png",im_hls)
         self.displaypicture("resultat_intermediaire/Dessin.png",False)
+        self.description.config(text="==> Image noire et blanche convertie vers 3 couleurs")
 
         #Tableau de flottant pour precision du masque
         bgdModel = np.zeros((1,65),np.float64)
@@ -197,6 +210,7 @@ class Draw(Frame):
         superpo = cv2.addWeighted(im_blc_corp,0.7,im_hls,0.5,0)
         cv2.imwrite("resultat_intermediaire/Back_SuperposCorps.png",superpo)
         self.displaypicture("resultat_intermediaire/Back_SuperposCorps.png",False)
+        self.description.config(text="==> Superposition de l'image masquée avec l'image en contour noir et blanc")
 
         im_hls=cv2.cvtColor(im_bin3, cv2.COLOR_GRAY2RGB)
 
@@ -215,32 +229,38 @@ class Draw(Frame):
         superpo1 = cv2.addWeighted(im_med_nuage,0.5,superpo,0.7,0)
         cv2.imwrite("resultat_intermediaire/Back_SuperposFond.png",superpo1)
         self.displaypicture("resultat_intermediaire/Back_SuperposFond.png",False)
+        self.description.config(text="==> Superposition du masque du fond avec la première superposition")
 
         #Stockage horizontale image contour noir et blanc et 1ere superposition
         bd1 = np.hstack((im_hls,superpo))
         cv2.imwrite("resultat_intermediaire/BD1.png",bd1)
         self.displaypicture("resultat_intermediaire/BD1.png",False)
+        self.description.config(text="==> Stockage horizontale des images 1/4")
 
         #Stockage horizontale image precedente et 2nd superposition
         bd2 = np.hstack((bd1,superpo1))
         cv2.imwrite("resultat_intermediaire/BD2.png",bd2)
         self.displaypicture("resultat_intermediaire/BD2.png",False)
+        self.description.config(text="==> Stockage horizontale des images 2/4")        
 
         #Stockage horizontale image 2 couleurs et image 3 couleurs
         bd3 = np.hstack((imgx150,imgx100))
         cv2.imwrite("resultat_intermediaire/BD3.png",bd3)
-        self.displaypicture("resultat_intermediaire/BD3.png",False)
+        self.displaypicture("resultat_intermediaire/BD3.png",False)        
+        self.description.config(text="==> Stockage horizontale des images 3/4")
 
         #Stockage horizontale image precedente et image 4 couleurs
         bd4 = np.hstack((bd3,imgx75))
         cv2.imwrite("resultat_intermediaire/BD4.png",bd4)
         self.displaypicture("resultat_intermediaire/BD4.png",False)
+        self.description.config(text="==> Stockage horizontale des images 4/4")
 
         #Stockage verticale image contour noir et blanc, 1ere superposition
         #et 2nd superposition avec image precedente
         bd5 = np.vstack((bd2,bd4))
         cv2.imwrite("Rendu.png",bd5)
-        self.displaypicture("Rendu.png",False)
+        self.displaypicture("Rendu.png",False)        
+        self.description.config(text="==> Voici l'historique du dessin de l'image de base")
         print "Rendu ok !"
         
         self.bouton_parcourir.config(state='active')
