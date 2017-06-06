@@ -12,12 +12,14 @@ class Draw(Frame):
     "classe définissant la fenêtre principale du programme"
     def __init__(self, fenetre, **kwargs):
         Frame.__init__(self, fenetre, **kwargs)
-        #self.grid(row=3, column=3, sticky="n")
+        self.columnconfigure(1, weight=1)
+        self.columnconfigure(3, pad=7)
+        self.rowconfigure(3, weight=1)
+        self.rowconfigure(5, pad=7)
         self.pack(fill=BOTH)
 
         self.bouton_parcourir = Button(self, text="Parcourir...", command=self.findpicture)
-        self.bouton_parcourir.grid(row=0, column=0, sticky="w")
-        self.bouton_parcourir.pack()
+        self.bouton_parcourir.grid(row=1, column=3)
 
         self.dem = Image.open(open("demarrer.jpg","rb"))
         x = 50
@@ -25,20 +27,16 @@ class Draw(Frame):
         resolution = (x,y)
         self.photodem = ImageTk.PhotoImage(self.dem.resize(resolution))
         self.bouton_modifier = Button(self, image=self.photodem, text="Modifier l'image",state='disabled', command=self.play)
-        self.bouton_modifier.grid(row=1, column=0, sticky="w")
-        self.bouton_modifier.pack()
+        self.bouton_modifier.grid(row=2, column=3, pady=4)
 
         self.bouton_quitter = Button(self, text="Quitter", command=fenetre.destroy)
-        self.bouton_quitter.grid(row=3, column=0, sticky="w")
-        self.bouton_quitter.pack()
+        self.bouton_quitter.grid(row=5, column=3) 
 
         self.consigne = Label(self, text="Consigne 1 : Ajouter une image...",fg="red", font=("Calibri", 18))
-        self.consigne.grid(row=4, column=0, sticky="n")
-        self.consigne.pack()
+        self.consigne.grid(row=0, sticky=W, pady=4, padx=5)
 
         self.can = Canvas(self, bg='white', width=500, height=500)
-        self.can.grid(row=0,column=1, sticky="n")
-        self.can.pack()
+        self.can.grid(row=1, column=0, padx=5, columnspan=2, rowspan=4 )
 
         self._thread = None
 
