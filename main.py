@@ -12,11 +12,11 @@ class Draw(Frame):
     "classe définissant la fenêtre principale du programme"
     def __init__(self, fenetre, **kwargs):
         Frame.__init__(self, fenetre, **kwargs)
-        self.grid(row=3, column=3, sticky="n")
+        #self.grid(row=3, column=3, sticky="n")
         self.pack(fill=BOTH)
 
         self.bouton_parcourir = Button(self, text="Parcourir...", command=self.findpicture)
-        self.bouton_parcourir.grid(row=1, column=0, sticky="w")
+        self.bouton_parcourir.grid(row=0, column=0, sticky="w")
         self.bouton_parcourir.pack()
 
         self.dem = Image.open(open("demarrer.jpg","rb"))
@@ -25,15 +25,19 @@ class Draw(Frame):
         resolution = (x,y)
         self.photodem = ImageTk.PhotoImage(self.dem.resize(resolution))
         self.bouton_modifier = Button(self, image=self.photodem, text="Modifier l'image",state='disabled', command=self.play)
-        self.bouton_modifier.grid(row=2, column=0, sticky="w")
+        self.bouton_modifier.grid(row=1, column=0, sticky="w")
         self.bouton_modifier.pack()
 
         self.bouton_quitter = Button(self, text="Quitter", command=fenetre.destroy)
         self.bouton_quitter.grid(row=3, column=0, sticky="w")
         self.bouton_quitter.pack()
 
+        self.consigne = Label(self, text="Consigne 1 : Ajouter une image...",fg="red", font=("Calibri", 18))
+        self.consigne.grid(row=4, column=0, sticky="n")
+        self.consigne.pack()
+
         self.can = Canvas(self, bg='white', width=500, height=500)
-        self.can.grid(row=3,column=3, sticky="n")
+        self.can.grid(row=0,column=1, sticky="n")
         self.can.pack()
 
         self._thread = None
@@ -53,16 +57,17 @@ class Draw(Frame):
         self.move = False
 
     def startRect(self, event):
+        if self.rectid != None :
+            self.can.delete(self.rect)
         self.move = True
         #Translate mouse screen x0,y0 coordinates to canvas coordinates
         self.rectx0 = self.can.canvasx(event.x)
         self.recty0 = self.can.canvasy(event.y) 
         #Create rectangle
-        self.rect = self.can.create_rectangle(
-            self.rectx0, self.recty0, self.rectx0, self.recty0, fill="#fff")
+        self.rect = self.can.create_rectangle(self.rectx0, self.recty0, self.rectx0, self.recty0, fill="#fff")
         #Get rectangle's canvas object ID
         self.rectid = self.can.find_closest(self.rectx0, self.recty0, halo=2)
-        print('Rectangle {0} started at {1} {2} {3} {4} '.
+        print('Rectangle x0, y0 = {1}, {2}'.
               format(self.rect, self.rectx0, self.recty0, self.rectx0,
                      self.recty0))
 
@@ -74,7 +79,6 @@ class Draw(Frame):
             #Modify rectangle x1, y1 coordinates
             self.can.coords(self.rectid, self.rectx0, self.recty0,
                           self.rectx1, self.recty1)
-            print('Rectangle x1, y1 = ', self.rectx1, self.recty1)
 
     def stopRect(self, event):
         self.move = False
@@ -84,9 +88,11 @@ class Draw(Frame):
         #Modify rectangle x1, y1 coordinates (final)
         self.can.coords(self.rectid, self.rectx0, self.recty0,
                       self.rectx1, self.recty1)
-        print('Rectangle dessiné')
+        print 'Rectangle x1, y1 = ', self.rectx1, self.recty1
+        print 'Rectangle dessiné'
 
     def findpicture(self):
+        self.image = None
         self.filepath = tfd.askopenfilename(title="Ouvrir une image",filetypes=[('jpg files','.jpeg'),('all files','.*')])
         self.displaypicture(self.filepath, True)
 
@@ -103,8 +109,10 @@ class Draw(Frame):
         self.can.config(width=width/2,height=height/2)
         if isokornot is True :            
             self.bouton_modifier.config(state='active')
+            self.consigne.config(text="Consigne 2 : Selectionner un rectangle pour appliquer le masque")
         else :
             self.bouton_modifier.config(state='disabled')
+
             
 
     def modificationimage(self):
@@ -112,6 +120,8 @@ class Draw(Frame):
             os.mkdir("resultat_intermediaire")
         except OSError:
             pass
+
+        self.consigne.config(text="Consigne 3 : Patientez le temps que le programme tourne ... ")
 
         #Lecture image de base en couleur
         im = cv2.imread("im_resized.jpg")
@@ -159,7 +169,7 @@ class Draw(Frame):
         self.rectx1 = int(round(self.rectx1))
         self.recty1 = int(round(self.recty1))
         if self.rectx0 != 0 :
-            rect_corp = (self.rectx0*2,self.recty0*2,(self.rectx1+self.rectx0)*2,(self.recty1+self.recty0)*2)
+            rect_corp = (self.rectx0*2,self.recty0,(self.rectx1-self.rectx0)+self.rectx0,(self.recty1+self.recty0)+self.recty0)
         else :
             rect_corp = (580,250,530,800)
         cv2.grabCut(im,mask,rect_corp,bgdModel,fgdModel,1,cv2.GC_INIT_WITH_RECT)
@@ -235,8 +245,9 @@ class Draw(Frame):
         self.displaypicture("Rendu.png",False)
         print "Rendu ok !"
         
-        self.load.destroy()
         self.bouton_parcourir.config(state='active')
+        self._thread = None
+        self.consigne.config(text="Consigne 4 : Retrouvez toutes les images créées dans le dossier racine !\nRechargez une image si vous le souhaitez pour recommencer")    
 
     def play(self):
         print "Travail en cours..."
@@ -244,11 +255,7 @@ class Draw(Frame):
         self.bouton_parcourir.config(state='disabled')
         if self._thread is None:
             self._thread = Thread(target=self.modificationimage)
-            self._thread.start()
-            self.load = Canvas(self, bg='grey', height=200)
-            self.load.grid(row=4,column=3, sticky="n")
-            self.load.pack()
-            # self.prog_bar = Progressbar(self.load, orient="horizontal", length=200, mode="indeterminate")        
+            self._thread.start()       
 
 fenetre = Tk()
 fenetre.title("Générateur de Bande Dessinée")
